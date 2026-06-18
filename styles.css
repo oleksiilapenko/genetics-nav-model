@@ -1,0 +1,833 @@
+:root {
+  --text: #0b0c0c;
+  --muted: #505a5f;
+  --border: #b1b4b6;
+  --border-soft: #d6d9db;
+  --card: #ffffff;
+  --bg: #ffffff;
+  --blue: #1671be;
+  --blue-dark: #0f5d9d;
+  --blue-disabled: #6ea8d9;
+  --purple: #8424ff;
+  --danger: #b10e1e;
+  --warning: #8a5a00;
+  --ok: #187141;
+  --focus: #ffdd00;
+  --shadow: 0 6.4px 14.4px rgba(0,0,0,.13), 0 1.2px 3.6px rgba(0,0,0,.1);
+  --button-shadow: inset 0 -2px 0 rgba(0,0,0,.2);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  color: var(--text);
+  background: var(--bg);
+  font-family: Lato, Arial, Helvetica, sans-serif;
+  font-size: 19px;
+  line-height: 1.28;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.site-header {
+  min-height: 84px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 18px 28px;
+  background: #fff;
+  border-bottom: 1px solid #d2d5cf;
+  box-shadow: 0 1px 4px rgba(0,0,0,.12);
+}
+
+.brand-left,
+.cts-logo {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nhs-logo {
+  height: 40px;
+  width: auto;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.service-title {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 0;
+  font-size: 18px;
+  line-height: 18px;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+}
+
+.service-tenant {
+  color: var(--text);
+  font-weight: 900;
+}
+
+.service-name {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.cts-logo {
+  white-space: nowrap;
+}
+
+.cts-logo-svg {
+  height: 30px;
+  width: auto;
+  display: block;
+  flex: 0 0 auto;
+}
+
+.app {
+  width: 100%;
+  min-height: calc(100vh - 84px);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px 72px;
+}
+
+.app:focus {
+  outline: none;
+}
+
+.card {
+  width: min(100%, 560px);
+  background: var(--card);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  padding: 32px 48px;
+}
+
+.card.review-card,
+.card.hub-card {
+  width: min(100%, 760px);
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-size: 24px;
+  line-height: 28px;
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+h2 {
+  margin: 32px 0 8px;
+  font-size: 21px;
+  line-height: 26px;
+}
+
+p {
+  margin: 0 0 20px;
+}
+
+.lead {
+  color: var(--text);
+  margin-bottom: 24px;
+}
+
+.muted,
+.hint {
+  color: var(--muted);
+}
+
+.hint {
+  margin: 4px 0 14px;
+}
+
+.field {
+  margin: 28px 0;
+}
+
+.field:first-child {
+  margin-top: 0;
+}
+
+label,
+.label,
+legend {
+  display: block;
+  margin: 0 0 8px;
+  color: var(--text);
+  font-weight: 400;
+}
+
+fieldset {
+  border: 0;
+  margin: 28px 0;
+  padding: 0;
+}
+
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--text);
+}
+
+textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+.short-input {
+  max-width: 84px;
+}
+
+/*
+  Focus & interaction states (GOV.UK / NHS pattern).
+  Focus = a thick black border with a yellow stroke sitting just outside it.
+  Text fields swap their grey border to black; other controls use a black ring
+  in the outline-offset gap so the yellow stays the outermost stroke.
+*/
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+  border-color: var(--text);
+  box-shadow: inset 0 0 0 2px var(--text);
+}
+
+.radio-option input:focus-visible,
+.count-button:focus-visible,
+.stepper-button:focus-visible,
+.button:focus-visible,
+.segment-option:has(input:focus-visible) {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--text);
+}
+
+.link-button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 0;
+  color: var(--text);
+  background: var(--focus);
+  text-decoration: none;
+}
+
+/* Hover affordance for the pill/segmented controls when not already selected. */
+.count-button:hover:not([aria-pressed="true"]),
+.stepper-button:hover,
+.segment-option:hover:not(:has(input:checked)) {
+  border-color: var(--text);
+}
+
+.radio-row,
+.segmented,
+.count-row,
+.stepper-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+
+.radio-stack {
+  display: grid;
+  gap: 14px;
+}
+
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 42px;
+  cursor: pointer;
+}
+
+.radio-option input {
+  appearance: none;
+  width: 40px;
+  height: 40px;
+  margin: 0;
+  flex: 0 0 auto;
+  border: 2px solid var(--border);
+  border-radius: 50%;
+  background: #fff;
+  position: relative;
+}
+
+.radio-option input:checked::after {
+  content: "";
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #000;
+}
+
+.radio-option .subtext {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+}
+
+.segmented {
+  gap: 8px;
+}
+
+.segment-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 6px 14px;
+  border: 2px solid var(--border);
+  border-radius: 22px;
+  cursor: pointer;
+}
+
+.segment-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.segment-option:has(input:checked) {
+  color: #fff;
+  background: #000;
+  border-color: #000;
+}
+
+.count-button,
+.stepper-button {
+  min-width: 68px;
+  min-height: 44px;
+  padding: 6px 16px;
+  color: var(--text);
+  background: #fff;
+  border: 2px solid var(--border);
+  border-radius: 24px;
+  cursor: pointer;
+}
+
+.count-button[aria-pressed="true"] {
+  color: #fff;
+  background: #000;
+  border-color: #000;
+}
+
+.stepper-row {
+  gap: 8px;
+}
+
+.stepper-button {
+  min-width: 48px;
+  border-radius: 4px;
+  background: #f3f3f3;
+}
+
+.stepper-row input {
+  width: 104px;
+  text-align: center;
+}
+
+.divider {
+  border: 0;
+  border-top: 1px solid var(--border-soft);
+  margin: 28px 0 20px;
+}
+
+/*
+  Cancer specification (Design Sprint 2026 node 18996:139363). Each cancer is a
+  vertically-stacked Cancer type + Age at diagnosis pair, grouped under a dark left
+  accent rule. The remove control is hidden when only one cancer is listed.
+*/
+.diagnosis-group {
+  border-left: 4px solid var(--text);
+  padding-left: 16px;
+  margin: 16px 0 20px;
+}
+
+.diagnosis-field {
+  margin-bottom: 16px;
+}
+
+.diagnosis-field:last-of-type {
+  margin-bottom: 12px;
+}
+
+.diagnosis-group:only-child .remove-diagnosis {
+  display: none;
+}
+
+.remove-diagnosis {
+  padding: 0;
+}
+
+.cancer-panel {
+  display: none;
+}
+
+.cancer-panel.is-open {
+  display: block;
+}
+
+.button-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-top: 32px;
+}
+
+.button {
+  min-height: 48px;
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 4px;
+  color: #fff;
+  background: var(--blue);
+  box-shadow: var(--button-shadow);
+  font-size: 24px;
+  line-height: 32px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.button:hover {
+  background: var(--blue-dark);
+}
+
+.button[disabled] {
+  background: var(--blue-disabled);
+}
+
+.button.secondary {
+  color: var(--text);
+  background: #fff;
+  border: 2px solid var(--border);
+  box-shadow: none;
+  font-size: 19px;
+  line-height: 24px;
+}
+
+.link-button {
+  min-height: auto;
+  padding: 0;
+  border: 0;
+  color: var(--muted);
+  background: transparent;
+  box-shadow: none;
+  text-decoration: underline;
+  font-size: 19px;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.link-button.primary-link {
+  color: var(--blue);
+  font-weight: 700;
+}
+
+.link-button.danger {
+  color: var(--danger);
+}
+
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.review-list,
+.hub-list {
+  margin: 28px 0 0;
+}
+
+.review-row,
+.hub-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  padding: 18px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.review-row:last-child,
+.hub-row:last-child {
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.row-title {
+  margin-bottom: 4px;
+  font-weight: 800;
+}
+
+.row-meta {
+  color: var(--muted);
+  font-size: 17px;
+}
+
+.row-actions {
+  display: grid;
+  align-content: start;
+  justify-items: end;
+  gap: 10px;
+}
+
+.status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  color: var(--muted);
+  background: #f2f4f5;
+  font-size: 15px;
+}
+
+.tag.ok {
+  color: var(--ok);
+  background: #e7f3ec;
+}
+
+.tag.warn {
+  color: var(--warning);
+  background: #fff4d7;
+}
+
+.tag.danger {
+  color: var(--danger);
+  background: #fbeaec;
+}
+
+.notice {
+  margin: 24px 0;
+  padding: 14px 16px;
+  border-left: 4px solid var(--blue);
+  background: #eef6fd;
+  color: var(--muted);
+}
+
+.empty-state {
+  color: var(--muted);
+  padding: 18px 0;
+  border-top: 1px solid var(--border-soft);
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.error {
+  display: none;
+  margin-top: 8px;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.error.is-open {
+  display: block;
+}
+
+/*
+  Inline field error (per the validation spec, Design Sprint 2026 node 21868:223079).
+  Sits between the label/hint and the control. Red icon + red text; the offending
+  control gets a red border (.input-error) or, for radio groups, the fieldset gets a
+  red left accent (.fieldset--error). No top-of-page error summary in this flow.
+*/
+.field-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0 0 12px;
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.field-error[hidden] {
+  display: none;
+}
+
+.field-error::before {
+  content: "!";
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--danger);
+  color: #fff;
+  font-size: 15px;
+  line-height: 22px;
+  text-align: center;
+}
+
+input.input-error,
+select.input-error,
+textarea.input-error {
+  border-color: var(--danger);
+  box-shadow: inset 0 0 0 1px var(--danger);
+}
+
+.fieldset--error {
+  border-left: 4px solid var(--danger);
+  padding-left: 16px;
+}
+
+.reveal-panel {
+  display: none;
+}
+
+.reveal-panel.is-open {
+  display: block;
+  margin-top: 16px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@media (max-width: 720px) {
+  .site-header {
+    min-height: auto;
+    padding: 12px 16px;
+  }
+
+  .service-title {
+    gap: 6px;
+    font-size: 12px;
+    line-height: 14px;
+    letter-spacing: 0.6px;
+  }
+
+  .cts-logo {
+    gap: 8px;
+  }
+
+  .nhs-logo {
+    height: 28px;
+  }
+
+  .cts-logo-svg {
+    height: 22px;
+  }
+
+  .app {
+    min-height: calc(100vh - 56px);
+    padding: 0;
+  }
+
+  .card,
+  .card.review-card,
+  .card.hub-card {
+    width: 100%;
+    min-height: calc(100vh - 56px);
+    padding: 28px 20px 48px;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .radio-row {
+    gap: 16px;
+  }
+
+  .button-bar {
+    align-items: flex-end;
+  }
+
+  .review-row,
+  .hub-row {
+    grid-template-columns: 1fr;
+  }
+
+  .row-actions {
+    justify-items: start;
+  }
+}
+
+/*
+  Prototype-only quick nav. Deliberately styled as a dark dev tool, distinct
+  from the product UI, so it is never mistaken for part of the patient journey.
+  Built by renderQuickNav() in app.js and lives outside #app so it survives
+  every setScreen() re-render. Not present in the real product.
+*/
+.quick-nav {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  font-family: Lato, Arial, Helvetica, sans-serif;
+}
+
+.quick-nav__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-nav__toggle,
+.quick-nav__fill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 8px 16px;
+  color: #fff;
+  background: #1d1f23;
+  border: 0;
+  border-radius: 22px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.28);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.quick-nav__fill {
+  background: #1f8a4c;
+}
+
+.quick-nav__fill:hover {
+  background: #24a058;
+}
+
+.quick-nav__panel {
+  display: none;
+  width: 250px;
+  max-height: min(70vh, 460px);
+  overflow-y: auto;
+  padding: 14px 16px 16px;
+  color: #f4f4f5;
+  background: #1d1f23;
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.34);
+}
+
+.quick-nav.is-open .quick-nav__panel {
+  display: block;
+}
+
+.quick-nav__heading {
+  margin: 0 0 4px;
+  color: #9aa0a6;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+.quick-nav__hint {
+  margin: 0 0 12px;
+  color: #7e848a;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.quick-nav__list {
+  display: grid;
+  gap: 2px;
+  margin: 0 0 12px;
+}
+
+.quick-nav__link {
+  display: block;
+  width: 100%;
+  padding: 9px 10px;
+  text-align: left;
+  color: #e7e8ea;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.quick-nav__link:hover {
+  background: #2b2e34;
+}
+
+.quick-nav__link.is-active {
+  color: #fff;
+  background: #3a3f47;
+  font-weight: 700;
+}
+
+.quick-nav__step {
+  display: inline-block;
+  width: 20px;
+  color: #7e848a;
+  font-variant-numeric: tabular-nums;
+}
+
+.quick-nav__reset {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  color: #ff9ea6;
+  background: transparent;
+  border: 1px solid #3a3f47;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.quick-nav__reset:hover {
+  background: #2b2e34;
+}
+
+.quick-nav__toggle:focus-visible,
+.quick-nav__fill:focus-visible,
+.quick-nav__link:focus-visible,
+.quick-nav__reset:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+  .quick-nav {
+    right: 12px;
+    bottom: 12px;
+  }
+
+  .quick-nav__panel {
+    width: min(78vw, 250px);
+  }
+}

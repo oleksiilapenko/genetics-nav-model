@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "genetics-proto",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["/tmp/genetics-preview/serve.py"],
+      "port": 8137
+    }
+  ]
+}
