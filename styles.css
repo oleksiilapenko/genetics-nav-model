@@ -38,6 +38,9 @@ textarea {
 }
 
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   min-height: 84px;
   display: flex;
   align-items: center;
@@ -103,6 +106,7 @@ textarea {
   align-items: flex-start;
   justify-content: center;
   padding: 48px 16px 72px;
+  background: linear-gradient(180deg, #E2F6F3 0%, #F8F0FE 100%);
 }
 
 .app:focus {
@@ -199,6 +203,18 @@ textarea {
   max-width: 84px;
 }
 
+/* Remove native number-input spinner controls across the flow. */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 /*
   Focus & interaction states (GOV.UK / NHS pattern).
   Focus = a thick black border with a yellow stroke sitting just outside it.
@@ -241,13 +257,19 @@ textarea:focus {
 }
 
 .radio-row,
-.segmented,
+.segmented {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 24px;
+}
+
 .count-row,
 .stepper-row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 24px;
+  gap: 12px;
 }
 
 .radio-stack {
@@ -320,16 +342,20 @@ textarea:focus {
   border-color: #000;
 }
 
-.count-button,
-.stepper-button {
-  min-width: 68px;
+.count-button {
+  min-width: 56px;
   min-height: 44px;
-  padding: 6px 16px;
+  padding: 6px 14px;
   color: var(--text);
   background: #fff;
   border: 2px solid var(--border);
   border-radius: 24px;
+  font: inherit;
   cursor: pointer;
+}
+
+.count-button--more {
+  padding-inline: 18px;
 }
 
 .count-button[aria-pressed="true"] {
@@ -338,19 +364,25 @@ textarea:focus {
   border-color: #000;
 }
 
-.stepper-row {
-  gap: 8px;
-}
-
 .stepper-button {
   min-width: 48px;
-  border-radius: 4px;
+  min-height: 44px;
+  padding: 6px 14px;
+  color: var(--text);
   background: #f3f3f3;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
 }
 
-.stepper-row input {
+input.stepper-input {
   width: 104px;
+  min-height: 44px;
   text-align: center;
+  border: 2px solid var(--border);
+  border-radius: 8px;
 }
 
 .divider {
@@ -467,6 +499,10 @@ textarea:focus {
   margin: 28px 0 0;
 }
 
+.list-add {
+  margin-top: 20px;
+}
+
 .review-row,
 .hub-row {
   display: grid;
@@ -531,14 +567,6 @@ textarea:focus {
   background: #fbeaec;
 }
 
-.notice {
-  margin: 24px 0;
-  padding: 14px 16px;
-  border-left: 4px solid var(--blue);
-  background: #eef6fd;
-  color: var(--muted);
-}
-
 .empty-state {
   color: var(--muted);
   padding: 18px 0;
@@ -560,8 +588,7 @@ textarea:focus {
 /*
   Inline field error (per the validation spec, Design Sprint 2026 node 21868:223079).
   Sits between the label/hint and the control. Red icon + red text; the offending
-  control gets a red border (.input-error) or, for radio groups, the fieldset gets a
-  red left accent (.fieldset--error). No top-of-page error summary in this flow.
+  control gets a red border (.input-error). No top-of-page error summary in this flow.
 */
 .field-error {
   display: flex;
@@ -594,11 +621,6 @@ select.input-error,
 textarea.input-error {
   border-color: var(--danger);
   box-shadow: inset 0 0 0 1px var(--danger);
-}
-
-.fieldset--error {
-  border-left: 4px solid var(--danger);
-  padding-left: 16px;
 }
 
 .reveal-panel {
@@ -650,6 +672,7 @@ textarea.input-error {
   .app {
     min-height: calc(100vh - 56px);
     padding: 0;
+    background: var(--bg);
   }
 
   .card,

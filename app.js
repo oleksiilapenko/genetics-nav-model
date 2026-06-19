@@ -26,6 +26,7 @@ const fixedDefs = [
     id: "mother",
     pedigreeId: "M",
     title: "Biological mother",
+    displayTitle: "Your mother",
     lead: "Tell us a few details about your biological mother.",
     sex: "Female",
     group: "Maternal side",
@@ -51,6 +52,7 @@ const fixedDefs = [
     id: "father",
     pedigreeId: "F",
     title: "Biological father",
+    displayTitle: "Your father",
     lead: "Tell us a few details about your biological father.",
     sex: "Male",
     group: "Paternal side",
@@ -80,9 +82,9 @@ const groupDefs = {
     singular: "sibling",
     label: "Sibling",
     gateTitle: "Do you have siblings?",
-    gateLead: "Brothers or sisters - anyone who shares your mother or father.",
+    gateLead: "Brothers or sisters – anyone who shares your mother or father.",
     countTitle: "How many siblings do you have?",
-    countLead: "Count your biological brothers and sisters. Include half-brothers and half-sisters - anyone who shares your mother or father.",
+    countLead: "Count your biological brothers and sisters. Include half-brothers and half-sisters – anyone who shares your mother or father.",
     formLead: "Tell us a few details about this sibling.",
     reviewTitle: "Review siblings",
     addLabel: "Add another sibling",
@@ -166,8 +168,8 @@ const otherTypeDefs = [
   },
   {
     key: "grandNieceNephew",
-    label: "Grand-niece or grand-nephew",
-    plural: "grand-nieces and grand-nephews",
+    label: "Great-niece or great-nephew",
+    plural: "great-nieces and great-nephews",
     hint: "Your niece's/nephew's child",
     lead: "Tell us what you know about this great-niece or great-nephew.",
     anchorQuestion: "Which of your nieces or nephews is this person's parent?",
@@ -186,8 +188,8 @@ const otherTypeDefs = [
   },
   {
     key: "grandAuntUncle",
-    label: "Grand-aunt or grand-uncle",
-    plural: "grand-aunts and grand-uncles",
+    label: "Great-aunt or great-uncle",
+    plural: "great-aunts and great-uncles",
     hint: "Your grandparent's sibling",
     lead: "This is your grandparent's sister or brother.",
     anchorQuestion: "Which of your grandparents is this relative's sibling?",
@@ -377,7 +379,7 @@ function backFromProband() {
     renderFinalHub();
     return;
   }
-  alert("Prototype starts here.");
+  alert("You're at the start of the assessment.");
 }
 
 function startFixedFlow() {
@@ -397,7 +399,7 @@ function renderFixedForm(id, fromReview = false, fromHub = false) {
     <p class="lead">${escapeHtml(def.lead)}</p>
     <p class="muted">Add what you know. Estimates are fine. You can skip optional questions if you're not sure.</p>
     ${personFields("fixed", person, { showSex: false, showSiblingShare: false })}
-    ${buttonBar(fromReview ? "Return to review" : "Back", "saveFixedPerson()", "backFromFixed()")}
+    ${buttonBar(fromReview ? "Return to review" : "Back", "saveFixedPerson()", "backFromFixed()", fromReview ? "Save changes" : "Continue")}
   `);
 }
 
@@ -451,7 +453,6 @@ function renderParentsReview(fromHub = false) {
   setScreen(`
     <h1>Review parents and grandparents</h1>
     <p class="lead">Check these details before you continue.</p>
-    <div class="notice">Parents and grandparents are part of the core family history. You can change any details you know, but they cannot be removed here.</div>
     <div class="review-list">${rows}</div>
     ${buttonBar("", "continueAfterParents()", "", fromHub ? "Return to family history review" : "Continue")}
   `, "review-card");
@@ -532,18 +533,27 @@ function renderCount(groupKey) {
   const group = state.groups[groupKey];
   const selected = group.selectedCount;
 
+  const moreMode = selected === "more";
+  const moreValue = group.count && group.count > 5 ? group.count : 6;
+
+  const control = moreMode
+    ? `
+    <div class="stepper-row" role="group" aria-label="${escapeAttr(def.countTitle)}">
+      <button type="button" class="stepper-button" onclick="stepCount('${groupKey}', -1)" aria-label="Fewer">&minus;</button>
+      <label class="sr-only" for="${groupKey}MoreCount">How many</label>
+      <input class="stepper-input" id="${groupKey}MoreCount" type="number" min="6" max="20" inputmode="numeric" value="${moreValue}">
+      <button type="button" class="stepper-button" onclick="stepCount('${groupKey}', 1)" aria-label="More">+</button>
+    </div>`
+    : `
+    <div class="count-row" role="group" aria-label="Choose how many">
+      ${[1, 2, 3, 4, 5].map(n => `<button type="button" class="count-button" data-count="${n}" aria-pressed="${String(selected) === String(n)}" onclick="selectCount('${groupKey}', '${n}')">${n}</button>`).join("")}
+      <button type="button" class="count-button count-button--more" data-count="more" aria-pressed="false" onclick="selectCount('${groupKey}', 'more')">More</button>
+    </div>`;
+
   setScreen(`
     <h1>${escapeHtml(def.countTitle)}</h1>
     <p class="lead muted">${escapeHtml(def.countLead)}</p>
-    <div class="count-row" role="group" aria-label="Choose count">
-      ${[1, 2, 3, 4, 5].map(n => `<button class="count-button" data-count="${n}" aria-pressed="${String(selected) === String(n)}" onclick="selectCount('${groupKey}', '${n}')">${n}</button>`).join("")}
-      <button class="count-button" data-count="more" aria-pressed="${selected === "more"}" onclick="selectCount('${groupKey}', 'more')">More</button>
-    </div>
-    <div id="${groupKey}Stepper" class="stepper-row" style="display:${selected === "more" ? "flex" : "none"}; margin-top:24px">
-      <button class="stepper-button" onclick="stepCount('${groupKey}', -1)" aria-label="Decrease">-</button>
-      <input id="${groupKey}MoreCount" type="number" min="6" max="20" value="${group.count && group.count > 5 ? group.count : 6}">
-      <button class="stepper-button" onclick="stepCount('${groupKey}', 1)" aria-label="Increase">+</button>
-    </div>
+    ${control}
     <div id="${groupKey}CountError" class="error">Choose how many to add.</div>
     ${buttonBar("Back", `startRepeatGroup('${groupKey}')`, `renderGate('${groupKey}')`)}
   `);
@@ -600,7 +610,7 @@ function renderRepeatForm(groupKey, index, editing = false, fromHub = false) {
     <p class="lead">${escapeHtml(def.formLead)}</p>
     <p class="muted">Add what you know. Estimates are fine. You can skip optional questions if you're not sure.</p>
     ${personFields("repeat", person, { showSex: true, showSiblingShare: groupKey === "siblings" })}
-    ${buttonBar(editing ? "Return to review" : "Back", "saveRepeatPerson()", "backFromRepeat()")}
+    ${buttonBar(editing ? "Return to review" : "Back", "saveRepeatPerson()", "backFromRepeat()", editing ? "Save changes" : "Continue")}
   `);
 }
 
@@ -674,6 +684,7 @@ function renderRepeatReview(groupKey, fromHub = false) {
   const group = state.groups[groupKey];
   const rows = group.items.length
     ? group.items.map((person, index) => reviewRow(person, {
+      groupKey,
       change: `renderRepeatForm('${groupKey}', ${index}, true, ${fromHub})`,
       remove: `removeRepeatPerson('${groupKey}', ${index})`,
       removable: true
@@ -684,10 +695,10 @@ function renderRepeatReview(groupKey, fromHub = false) {
     <h1>${escapeHtml(def.reviewTitle)}</h1>
     <p class="lead">${group.items.length ? `You added ${group.items.length} ${group.items.length === 1 ? def.singular : def.title}. Check these details before you continue.` : `You said you do not have any ${def.title}.`}</p>
     <div class="review-list">${rows}</div>
-    <div class="button-bar">
+    <div class="list-add">
       <button class="button secondary" onclick="addRepeatPerson('${groupKey}')">${escapeHtml(def.addLabel)}</button>
-      <button class="button" onclick="continueAfterRepeatReview('${groupKey}')">${fromHub ? "Return to family history review" : "Continue"}</button>
     </div>
+    ${buttonBar("", `continueAfterRepeatReview('${groupKey}')`, "", fromHub ? "Return to family history review" : "Continue")}
   `, "review-card");
 }
 
@@ -733,10 +744,10 @@ function renderOtherGate(fromHub = false) {
         <li>first cousins</li>
         <li>great-aunts or great-uncles</li>
         <li>nieces or nephews</li>
-        <li>grandnieces or grandnephews</li>
+        <li>great-nieces or great-nephews</li>
         <li>great-grandparents</li>
       </ul>
-      <p>You do not need to add everyone in your family - only relatives who have been diagnosed with cancer.</p>
+      <p>You do not need to add everyone in your family – only relatives who have been diagnosed with cancer.</p>
     </div>
     <fieldset>
       <legend class="sr-only">Choose one option</legend>
@@ -778,10 +789,10 @@ function renderOtherReview(fromHub = false) {
     <h1>Other blood relatives with cancer</h1>
     <p class="lead">Add any other blood relatives who have been diagnosed with cancer. Add one relative at a time.</p>
     <div class="review-list">${rows}</div>
-    <div class="button-bar">
+    <div class="list-add">
       <button class="button secondary" onclick="renderOtherTypeSelect()">Add relative with cancer</button>
-      <button class="button" onclick="continueAfterOtherReview()">${fromHub ? "Return to family history review" : "Continue"}</button>
     </div>
+    ${buttonBar("", "continueAfterOtherReview()", "", fromHub ? "Return to family history review" : "Continue")}
   `, "review-card");
 }
 
@@ -867,7 +878,7 @@ function renderOtherForm(person) {
       <label for="otherNotes" class="muted">Add anything else you know, such as treatment, stage, genetic testing, or other family history.</label>
       <textarea id="otherNotes">${escapeHtml(person.notes)}</textarea>
     </div>
-    ${buttonBar("Back", "saveOtherPerson()", "renderOtherReview()")}
+    ${buttonBar("Back", "saveOtherPerson()", "renderOtherReview()", runtime.otherEditingIndex !== null ? "Save changes" : "Continue")}
   `);
 }
 
@@ -954,10 +965,9 @@ function renderFinalHub() {
     <h1>Review your family history</h1>
     <p class="lead muted">Open a section to check or change the details before continuing.</p>
     <div class="hub-list">${rows}</div>
-    <div class="notice">This review highlights missing answers, estimated fields, and possible age conflicts. It does not replace clinical review.</div>
     <div class="button-bar">
       <button class="link-button" onclick="renderOtherReview()">Back</button>
-      <button class="button" onclick="alert('Prototype complete')">Confirm and continue</button>
+      <button class="button" onclick="alert('That is the end of the prototype. In the real service, this would submit your answers.')">Confirm and continue</button>
     </div>
   `, "hub-card");
 }
@@ -1086,8 +1096,8 @@ function livingField(prefix, current, deathYear) {
 function diagnosisEditor(prefix, diagnoses) {
   const rows = diagnoses && diagnoses.length ? diagnoses : [{}];
   const heading = prefix === "proband"
-    ? "What type of cancer you had and how old you were when diagnosed?"
-    : "What type of cancer they had and how old they were when diagnosed?";
+    ? "What type of cancer did you have, and how old were you when you were diagnosed?"
+    : "What type of cancer did they have, and how old were they when they were diagnosed?";
   return `
     <div class="field">
       <label><strong>${heading}</strong></label>
@@ -1106,7 +1116,7 @@ function diagnosisRow(prefix, diagnosis = {}, index = 0) {
         <label for="${prefix}CancerType${index}" class="label">Cancer type</label>
         ${errorSlot(`${prefix}CancerType${index}Error`)}
         <select id="${prefix}CancerType${index}" data-diagnosis-type>
-          <option value="">Type to search...</option>
+          <option value="">Select a cancer type</option>
           ${cancerTypes.map(type => `<option value="${escapeAttr(type)}" ${diagnosis.type === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
         </select>
       </div>
@@ -1163,9 +1173,49 @@ function buttonBar(backText, continueAction, backAction, continueText = "Continu
   `;
 }
 
+// Friendly, human relationship word for a person, or null when no mapping fits
+// (caller then falls back to the stored relationship/label). Close kinds get a
+// familiar word (Brother, Daughter, Aunt…); distant kinds keep their formal term
+// (First cousin, Great-niece…). Keyed off a stable category — never off
+// `person.relationship`, which for siblings holds "Full sibling"/"Half-sibling…".
+const FRIENDLY_GROUP = {
+  siblings: { Male: "Brother", Female: "Sister" },
+  children: { Male: "Son", Female: "Daughter" },
+  maternalPiblings: { Male: "Uncle", Female: "Aunt" },
+  paternalPiblings: { Male: "Uncle", Female: "Aunt" }
+};
+const FRIENDLY_OTHER = {
+  grandchild: { Male: "Grandson", Female: "Granddaughter" },
+  greatGrandchild: { Male: "Great-grandson", Female: "Great-granddaughter" },
+  nieceNephew: { Male: "Nephew", Female: "Niece" },
+  grandNieceNephew: { Male: "Great-nephew", Female: "Great-niece" },
+  firstCousin: { Male: "First cousin", Female: "First cousin", "": "First cousin" },
+  grandAuntUncle: { Male: "Great-uncle", Female: "Great-aunt" },
+  greatGrandparent: { Male: "Great-grandfather", Female: "Great-grandmother" }
+};
+
+function friendlyRelation(person, opts = {}) {
+  if (!person) return null;
+  if (person.typeKey && FRIENDLY_OTHER[person.typeKey]) {
+    return FRIENDLY_OTHER[person.typeKey][person.sex] || null;
+  }
+  let groupKey = opts.groupKey;
+  if (!groupKey && person.recordId) {
+    const candidate = String(person.recordId).split("-")[0];
+    if (groupDefs[candidate]) groupKey = candidate;
+  }
+  if (groupKey && FRIENDLY_GROUP[groupKey]) {
+    return FRIENDLY_GROUP[groupKey][person.sex] || null;
+  }
+  return null;
+}
+
 function reviewRow(person, opts) {
   const tags = tagsForPerson(person);
-  const title = opts.fixedDef ? opts.fixedDef.title : person.name || person.relationship || person.pedigreeId || "Relative";
+  const role = opts.fixedDef
+    ? (opts.fixedDef.displayTitle || opts.fixedDef.title)
+    : (friendlyRelation(person, opts) || person.relationship || person.pedigreeId || "Relative");
+  const title = person.name ? `${person.name} — ${role}` : role;
   const meta = personMeta(person);
   return `
     <article class="review-row">
@@ -1201,8 +1251,7 @@ function personMeta(person) {
   const bits = [];
   if (person.relationship) bits.push(person.relationship);
   if (person.sex) bits.push(person.sex);
-  bits.push(person.birthYear ? `YOB ${person.birthYear}` : "YOB not added");
-  if (person.living) bits.push(person.living);
+  bits.push(lifespanText(person));
   if (person.cancer === "Yes" || person.diagnoses.length) {
     bits.push(person.diagnoses.length ? diagnosisText(person.diagnoses) : "cancer reported");
   } else if (person.cancer === "No") {
@@ -1213,6 +1262,18 @@ function personMeta(person) {
     bits.push("cancer history not added");
   }
   return bits.join(" · ");
+}
+
+// Compact lifespan for review summaries: "1934–2002" when deceased with a known
+// year of death, "b. 1958" while alive. Uses an en dash for the year range.
+function lifespanText(person) {
+  const born = person.birthYear;
+  const died = person.living === "Died";
+  const yod = person.yearOfDeath;
+  if (born && died) return yod ? `${born}–${yod}` : `b. ${born} · died`;
+  if (born) return `b. ${born}`;
+  if (died) return yod ? `d. ${yod}` : "died";
+  return "YOB not added";
 }
 
 function diagnosisText(diagnoses) {
@@ -1226,7 +1287,7 @@ function tagsForPerson(person) {
   const approximations = approximationFlags(person);
   missing.forEach(item => tags.push({ label: item, type: "warn" }));
   approximations.forEach(item => tags.push({ label: item, type: "warn" }));
-  issues.forEach(item => tags.push({ label: item, type: "danger" }));
+  issues.forEach(item => tags.push({ label: item, type: "warn" }));
   return tags;
 }
 
@@ -1242,7 +1303,7 @@ function missingFields(person) {
 function approximationFlags(person) {
   const flags = [];
   if (person.cancer === "Yes" && person.diagnoses.some(item => item.type && !item.age)) {
-    flags.push("Diagnosis age will need approximation");
+    flags.push("Age at diagnosis missing");
   }
   if (person.cancer === "Yes" && !person.diagnoses.length) {
     flags.push("Cancer details missing");
@@ -1250,39 +1311,47 @@ function approximationFlags(person) {
   return flags;
 }
 
+/*
+  Age-conflict detection across all parent/child links (not just the proband's
+  children). A pair conflicts when the child's birth year is fewer than
+  MIN_PARENT_AGE years after the parent's. Conflicts are non-blocking: they
+  surface as an amber "Check birth years" flag on BOTH the child's and the
+  parent's review rows, so a wrong year on either record is easy to spot.
+*/
 function ageIssuesForPerson(person) {
-  const issues = [];
-  const parentRefs = inferredParentsFor(person);
-  parentRefs.forEach(parent => {
-    if (!parent) return;
+  const conflict = parentChildEdges().some(({ parent, child }) => {
+    if (person.recordId !== parent.recordId && person.recordId !== child.recordId) return false;
     const parentYob = toYear(parent.birthYear);
-    const childYob = toYear(person.birthYear);
-    if (parentYob && childYob && childYob - parentYob < MIN_PARENT_AGE) {
-      issues.push("Possible parent/child age conflict");
-    }
+    const childYob = toYear(child.birthYear);
+    return parentYob && childYob && childYob - parentYob < MIN_PARENT_AGE;
   });
-  return [...new Set(issues)];
+  return conflict ? ["Check birth years"] : [];
 }
 
-function inferredParentsFor(person) {
-  const parents = [];
-  if (person.parentIds && person.parentIds.father) parents.push(findPersonByPedigreeId(person.parentIds.father));
-  if (person.parentIds && person.parentIds.mother) parents.push(findPersonByPedigreeId(person.parentIds.mother));
-  if (person.anchorId) {
-    const type = otherTypeDefs.find(item => item.key === person.typeKey);
-    const anchor = findPersonByRecordId(person.anchorId);
-    if (type && anchor && ["grandchild", "greatGrandchild", "nieceNephew", "grandNieceNephew", "firstCousin"].includes(type.key)) {
-      parents.push(anchor);
-    }
-    if (type && anchor && type.key === "greatGrandparent") {
-      const gpYob = toYear(anchor.birthYear);
-      const personYob = toYear(person.birthYear);
-      if (gpYob && personYob && gpYob - personYob < MIN_PARENT_AGE) {
-        parents.push({ birthYear: person.birthYear });
-      }
-    }
-  }
-  return parents;
+/*
+  Real parent -> child links derived from each person's parentIds. Synthetic
+  placeholders (unknown spouses "USF#"/"USM#"/"UP1", "other" partners "U-…")
+  resolve to nobody and are skipped. The proband is resolved via the pedigree
+  id "P" that their children point at. greatGrandparent stores the grandparent
+  it is the parent of, so that edge is added in the parent->child direction.
+*/
+function parentChildEdges() {
+  const edges = [];
+  const add = (parent, child) => {
+    if (parent && child && parent.recordId !== child.recordId) edges.push({ parent, child });
+  };
+  allPeople().forEach(person => {
+    const ids = person.parentIds || {};
+    ["father", "mother", "parent", "knownParent"].forEach(key => {
+      if (ids[key]) add(findPersonByPedigreeId(ids[key]), person);
+    });
+    if (ids.parentOf) add(person, findPersonByPedigreeId(ids.parentOf));
+  });
+  return edges;
+}
+
+function probandAsPerson() {
+  return { ...state.proband, recordId: "proband", pedigreeId: "P", relationship: "You" };
 }
 
 function sectionTagsForPeople(people) {
@@ -1317,8 +1386,9 @@ function tagHtml(tag) {
 
 function probandSummary() {
   if (!state.proband.cancer) return "Not answered";
-  if (state.proband.cancer === "Yes") return state.proband.diagnoses.length ? diagnosisText(state.proband.diagnoses) : "Cancer reported";
-  return state.proband.cancer;
+  if (state.proband.cancer === "Yes") return state.proband.diagnoses.length ? diagnosisText(state.proband.diagnoses) : "You have been diagnosed with cancer";
+  if (state.proband.cancer === "Not sure") return "You're not sure if you've been diagnosed with cancer";
+  return "You have not been diagnosed with cancer";
 }
 
 function groupSummary(groupKey) {
@@ -1355,6 +1425,7 @@ function findPersonByRecordId(recordId) {
 }
 
 function findPersonByPedigreeId(pedigreeId) {
+  if (pedigreeId === "P") return probandAsPerson();
   return allPeople().find(person => person.pedigreeId === pedigreeId);
 }
 
@@ -1367,9 +1438,9 @@ function allPeople() {
 }
 
 function anchorLabel(person) {
-  const name = person.name || person.relationship || person.pedigreeId;
+  const name = person.name || friendlyRelation(person) || person.relationship || person.pedigreeId;
   const details = [person.sex, person.birthYear ? `YOB ${person.birthYear}` : ""].filter(Boolean).join(", ");
-  return `${name}${details ? ` - ${details}` : ""}`;
+  return `${name}${details ? ` – ${details}` : ""}`;
 }
 
 function sequenceForOther(person) {
@@ -1423,9 +1494,6 @@ function setFieldError(id, message) {
   if (control) {
     control.classList.add("input-error");
     control.setAttribute("aria-invalid", "true");
-  } else {
-    const fieldset = el.closest("fieldset");
-    if (fieldset) fieldset.classList.add("fieldset--error");
   }
 }
 
@@ -1440,7 +1508,6 @@ function clearPersonErrors() {
     el.classList.remove("input-error");
     el.removeAttribute("aria-invalid");
   });
-  app.querySelectorAll(".fieldset--error").forEach(el => el.classList.remove("fieldset--error"));
 }
 
 function focusFirstError() {
@@ -1577,7 +1644,7 @@ function escapeAttr(value) {
 */
 const fixedSeeds = {
   mother: { name: "Susan", birthYear: "1958", living: "Alive", cancer: "Yes", diagnoses: [{ type: "Breast cancer", age: "49" }], treatedWhere: "Poole Hospital" },
-  mgm: { name: "Margaret", birthYear: "1934", living: "Died", yearOfDeath: "2002", cancer: "Yes", diagnoses: [{ type: "Breast cancer", age: "61" }] },
+  mgm: { name: "Margaret", birthYear: "1934", living: "Died", yearOfDeath: "2002", cancer: "Yes", diagnoses: [{ type: "Breast cancer", age: "61" }, { type: "Ovarian cancer", age: "66" }] },
   mgf: { name: "George", birthYear: "1931", living: "Died", yearOfDeath: "1998", cancer: "No" },
   father: { name: "David", birthYear: "1956", living: "Alive", cancer: "No" },
   pgm: { name: "Joan", birthYear: "1936", living: "Died", yearOfDeath: "2010", cancer: "No" },
@@ -1843,7 +1910,9 @@ function renderQuickNav() {
 
   const milestones = [
     { label: "Cancer history (start)", run: () => renderProband() },
-    { label: "Parents & grandparents", run: () => renderParentsReview() },
+    // Only milestone that lands on a populated review, so it must seed the fixed
+    // relatives it displays (not just the steps strictly before it).
+    { label: "Parents & grandparents", run: () => renderParentsReview(), seedTo: 2 },
     { label: "Siblings", run: () => renderGate("siblings") },
     { label: "Children", run: () => renderGate("children") },
     { label: "Maternal aunts & uncles", run: () => renderGate("maternalPiblings") },
@@ -1868,7 +1937,7 @@ function renderQuickNav() {
     link.addEventListener("click", () => {
       list.querySelectorAll(".quick-nav__link").forEach(el => el.classList.remove("is-active"));
       link.classList.add("is-active");
-      seedSectionsBefore(index);
+      seedSectionsBefore(milestone.seedTo != null ? milestone.seedTo : index);
       milestone.run();
     });
     list.appendChild(link);
