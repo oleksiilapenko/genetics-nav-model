@@ -649,6 +649,12 @@ function saveRepeatPerson() {
     ...fields,
     relationship: groupKey === "siblings" ? getRadio("repeatShareParents") : groupDefs[groupKey].label
   };
+  // Adding commits the new slot here (it was not pushed up front), so bring the
+  // group's bookkeeping in line with what's now in items.
+  if (runtime.formMode === "add") {
+    group.has = "Yes";
+    group.count = group.items.length;
+  }
   assignGroupPedigree(groupKey);
   saveState();
   if (runtime.formMode === "add") showToast(`${fields.name || groupDefs[groupKey].singular} added`);
@@ -692,6 +698,15 @@ function assignGroupPedigree(groupKey) {
 
 function backFromRepeat() {
   const groupKey = runtime.currentGroup;
+  // Adding: nothing has been committed yet (see addRepeatPerson). Confirm before
+  // dropping a partly-filled form, then return to the review with no record left
+  // behind — an untouched form discards silently.
+  if (runtime.formMode === "add") {
+    if (!confirmDiscardIfDirty("repeat", groupDefs[groupKey].singular)) return;
+    if (backToHubFromEdit()) return;
+    renderRepeatReview(groupKey, runtime.returnToHub);
+    return;
+  }
   if (backToHubFromEdit()) return;
   if (runtime.editingIndex !== null) {
     renderRepeatReview(groupKey, runtime.returnToHub);
@@ -727,13 +742,14 @@ function renderRepeatReview(groupKey, fromHub = false) {
   `, "review-card");
 }
 
+// Open a blank add form for the next slot WITHOUT committing it. The person is
+// only pushed into the group once saveRepeatPerson validates the form (see the
+// "add" branch there), so backing out of an untouched form no longer leaves an
+// empty relative in the review. renderRepeatForm tolerates a not-yet-existing
+// index by rendering a transient blank person for the fields.
 function addRepeatPerson(groupKey) {
   const group = state.groups[groupKey];
-  group.has = "Yes";
-  group.items.push(createGroupPerson(groupKey, group.items.length));
-  group.count = group.items.length;
-  saveState();
-  renderRepeatForm(groupKey, group.items.length - 1, true, false, true);
+  renderRepeatForm(groupKey, group.items.length, false, false, true);
 }
 
 function removeRepeatPerson(groupKey, index) {
@@ -923,7 +939,7 @@ function renderOtherForm(person) {
       <label for="otherNotes" class="muted">Add anything else you know, such as treatment, stage, genetic testing, or other family history.</label>
       <textarea id="otherNotes">${escapeHtml(person.notes)}</textarea>
     </div>
-    ${buttonBar(editing || runtime.editToHub ? "Back to review" : "Back", "saveOtherPerson()", runtime.editToHub ? "renderFinalHub()" : editing ? "renderOtherReview()" : "renderOtherTypeSelect()", editing ? "Save changes" : "Add and continue")}
+    ${buttonBar(editing || runtime.editToHub ? "Back to review" : "Back", "saveOtherPerson()", "backFromOtherForm()", editing ? "Save changes" : "Add and continue")}
   `);
 }
 
@@ -959,6 +975,21 @@ function saveOtherPerson() {
   showToast(isAdding ? `${person.name || person.relationship} added` : "Changes saved");
   if (backToHubFromEdit()) return;
   renderOtherReview(runtime.returnToHub);
+}
+
+// Back from the other-relative form. Adding a new relative discards an
+// uncommitted form (with a confirm if it's been touched); editing returns to the
+// review with the saved record untouched. The hub path takes precedence so an
+// edit/add launched from the final hub returns there.
+function backFromOtherForm() {
+  const editing = runtime.otherEditingIndex !== null;
+  if (!editing && !confirmDiscardIfDirty("other", "relative")) return;
+  if (backToHubFromEdit()) return;
+  if (editing) {
+    renderOtherReview(runtime.returnToHub);
+    return;
+  }
+  renderOtherTypeSelect();
 }
 
 function editOtherPerson(index, fromHub = false) {
@@ -1284,6 +1315,31 @@ function backToHubFromEdit() {
   runtime.returnToHub = false;
   renderFinalHub();
   return true;
+}
+
+// Guard for leaving an uncommitted "add" form. Returns true when it is safe to
+// discard (the form is untouched, or the user confirmed) and false to stay put.
+// Now that backing out of an add no longer leaves a saved record, this stops an
+// accidental Back from quietly throwing away half-entered details.
+function confirmDiscardIfDirty(prefix, noun = "relative") {
+  if (!personFormDirty(prefix)) return true;
+  return confirm(`Discard this ${noun}? The details you've added won't be saved.`);
+}
+
+// Has the user actually put anything into the form? Used only by the add flow,
+// where every field starts empty. The cancer question is deliberately ignored:
+// it defaults to "Yes" for other relatives, so it is not user-entered progress.
+function personFormDirty(prefix) {
+  if (value(`${prefix}Name`)) return true;
+  if (getRadio(`${prefix}Sex`)) return true;
+  if (value(`${prefix}BirthYear`)) return true;
+  if (getRadio(`${prefix}Living`)) return true;
+  if (value(`${prefix}DeathYear`)) return true;
+  if (value(`${prefix}TreatedWhere`)) return true;
+  if (value(`${prefix}Notes`)) return true;
+  if (getRadio(`${prefix}ShareParents`)) return true; // siblings only
+  if (prefix === "other" && value("otherAnchor")) return true;
+  return readDiagnoses(prefix).length > 0;
 }
 
 function editFixedFromHub(id) {
@@ -2481,6 +2537,7 @@ window.renderOtherReview = renderOtherReview;
 window.renderOtherTypeSelect = renderOtherTypeSelect;
 window.continueFromOtherType = continueFromOtherType;
 window.renderOtherForm = renderOtherForm;
+window.backFromOtherForm = backFromOtherForm;
 window.expandAnchorLabels = expandAnchorLabels;
 window.collapseAnchorLabel = collapseAnchorLabel;
 window.saveOtherPerson = saveOtherPerson;
