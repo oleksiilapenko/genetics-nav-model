@@ -1533,6 +1533,9 @@ function breastLateralityRow(prefix, index, current) {
   `;
 }
 
+// One age input. The default reads back via [data-diagnosis-age]; the bilateral
+// breast "second diagnosis" passes attr=data-diagnosis-age2 + suffix="2" so the
+// two ages stay separable in both the DOM lookup and their element ids.
 function ageField(prefix, index, value, label, opts = {}) {
   const attr = opts.attr || "data-diagnosis-age";
   const id = `${prefix}CancerAge${opts.suffix || ""}${index}`;
@@ -1548,7 +1551,13 @@ function ageField(prefix, index, value, label, opts = {}) {
 
 function addDiagnosisRow(prefix) {
   const root = document.getElementById(`${prefix}DiagnosisRows`);
-  const index = root.querySelectorAll("[data-diagnosis-row]").length;
+  // The index becomes part of every field id in the row, so it must stay unique
+  // for the life of the screen. Use max(existing index) + 1 rather than the row
+  // count: removing a middle row leaves a gap, and a count-based index would
+  // reuse a number still in play and collide ids (e.g. two "probandCancerType2").
+  const indices = Array.from(root.querySelectorAll("[data-diagnosis-row]"))
+    .map(row => Number(row.dataset.index) || 0);
+  const index = indices.length ? Math.max(...indices) + 1 : 0;
   root.insertAdjacentHTML("beforeend", diagnosisRow(prefix, {}, index));
 }
 
@@ -1605,6 +1614,10 @@ function readDiagnosisRowValues(row) {
   };
 }
 
+// Read every diagnosis row into the stored shape. laterality/age2 are kept only
+// for breast cancer (and age2 only for the bilateral case), so a person who
+// switched away from breast doesn't carry stale fields. Fully empty rows are
+// dropped, so an untouched "Add another" row never persists as a blank entry.
 function readDiagnoses(prefix) {
   const root = document.getElementById(`${prefix}DiagnosisRows`);
   if (!root) return [];
