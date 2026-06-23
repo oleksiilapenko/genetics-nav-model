@@ -10,7 +10,9 @@
   --blue-disabled: #6ea8d9;
   --purple: #8424ff;
   --danger: #b10e1e;
+  --error: #e42045;
   --warning: #8a5a00;
+  --cancer: #c75300;
   --ok: #187141;
   --focus: #ffdd00;
   --shadow: 0 6.4px 14.4px rgba(0,0,0,.13), 0 1.2px 3.6px rgba(0,0,0,.1);
@@ -123,7 +125,7 @@ textarea {
 
 .card.review-card,
 .card.hub-card {
-  width: min(100%, 760px);
+  width: min(100%, 640px);
 }
 
 h1 {
@@ -315,6 +317,20 @@ textarea:focus {
   color: var(--muted);
 }
 
+/* A radio whose label carries explanatory subtext: stack the two lines and top-
+   align the control so the circle sits level with the first line, not the block. */
+.radio-option-text {
+  display: block;
+}
+
+.radio-option.has-subtext {
+  align-items: flex-start;
+}
+
+.radio-option.has-subtext .radio-option-text {
+  padding-top: 7px;
+}
+
 .segmented {
   gap: 8px;
 }
@@ -410,12 +426,33 @@ input.stepper-input {
   margin-bottom: 12px;
 }
 
-.diagnosis-group:only-child .remove-diagnosis {
-  display: none;
+/*
+  The cancer-type selector sits beside its remove control. Bottom-aligning the
+  row keeps the trash icon level with the select no matter how tall the label
+  above it is (or whether an error message has pushed the select down).
+*/
+.diagnosis-type-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.diagnosis-type-row .diagnosis-field {
+  flex: 1 1 auto;
+  margin-bottom: 0;
+}
+
+.diagnosis-body > .diagnosis-field:first-child {
+  margin-top: 16px;
 }
 
 .remove-diagnosis {
-  padding: 0;
+  color: var(--muted);
+}
+
+.remove-diagnosis:hover {
+  color: var(--danger);
+  background: #fcebed;
 }
 
 .cancer-panel {
@@ -432,6 +469,11 @@ input.stepper-input {
   align-items: center;
   gap: 24px;
   margin-top: 32px;
+}
+
+/* A lone primary action stretches full-bleed across the content width. */
+.button-bar.single-action .button {
+  width: 100%;
 }
 
 .button {
@@ -503,68 +545,23 @@ input.stepper-input {
   margin-top: 20px;
 }
 
-.review-row,
-.hub-row {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 20px;
-  padding: 18px 0;
-  border-top: 1px solid var(--border-soft);
-}
-
-.review-row:last-child,
-.hub-row:last-child {
-  border-bottom: 1px solid var(--border-soft);
-}
-
 .row-title {
   margin-bottom: 4px;
+  font-weight: 400;
+}
+
+.row-title strong {
   font-weight: 800;
+}
+
+/* The relationship appended to a name is secondary: lighter weight and colour. */
+.row-role {
+  font-weight: 400;
+  color: var(--muted);
 }
 
 .row-meta {
   color: var(--muted);
-  font-size: 17px;
-}
-
-.row-actions {
-  display: grid;
-  align-content: start;
-  justify-items: end;
-  gap: 10px;
-}
-
-.status-line {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.tag {
-  display: inline-flex;
-  align-items: center;
-  min-height: 26px;
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: var(--muted);
-  background: #f2f4f5;
-  font-size: 15px;
-}
-
-.tag.ok {
-  color: var(--ok);
-  background: #e7f3ec;
-}
-
-.tag.warn {
-  color: var(--warning);
-  background: #fff4d7;
-}
-
-.tag.danger {
-  color: var(--danger);
-  background: #fbeaec;
 }
 
 .empty-state {
@@ -572,6 +569,286 @@ input.stepper-input {
   padding: 18px 0;
   border-top: 1px solid var(--border-soft);
   border-bottom: 1px solid var(--border-soft);
+}
+
+/*
+  Final hub as a single full review. Each section is a quiet uppercase label
+  over a list of per-person rows. Colour does the signalling: the red age-conflict
+  warning (.row-warning) is the only thing that pops at rest, the edit pencil is a
+  neutral dark control that turns blue on hover, the kebab is muted grey, and
+  Remove is red only once the menu is open.
+*/
+.hub-review {
+  margin-top: 24px;
+}
+
+.hub-section {
+  margin-top: 30px;
+}
+
+.hub-section:first-child {
+  margin-top: 0;
+}
+
+.hub-section-title {
+  margin: 0 0 2px;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.person-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: start;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+/*
+  A diagnosis is the one thing meant to catch the eye, but quietly: the orange
+  bullet does the signalling while the text itself stays plain (not bold, not
+  red), in keeping with the never-alarmist tone. One line per cancer.
+*/
+.row-cancer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--text);
+  font-weight: 400;
+}
+
+/*
+  Each diagnosis is one unit. It stays on a single line (white-space: nowrap) so
+  it never breaks mid-phrase; when the row runs out of space the whole unit wraps
+  to the next line. The orange bullet leads each one and does the signalling.
+*/
+.row-cancer li {
+  white-space: nowrap;
+}
+
+.row-cancer li::before {
+  content: "•";
+  margin-right: 6px;
+  color: var(--cancer);
+  font-weight: 700;
+}
+
+/* "Not sure about cancer" — its own neutral line, a step below a diagnosis. */
+.row-unsure {
+  margin-top: 6px;
+  color: var(--muted);
+}
+
+/* A muted stand-in for an optional value left blank — never an error colour. */
+.placeholder {
+  color: var(--muted);
+}
+
+/*
+  Inline age-conflict warning on a relative's row. The triangle icon plus error
+  red mark it as the one thing worth stopping for, while the wording states the
+  rule (never names anyone). align-items: flex-start keeps the icon level with
+  the first line when the message wraps.
+*/
+.row-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 8px 0 0;
+  color: var(--danger);
+}
+
+.row-warning svg {
+  flex: none;
+  margin-top: 1px;
+}
+
+/*
+  Global error shown only when the user tries to confirm with unresolved age
+  conflicts. It points back to the highlighted rows without naming anyone, so it
+  reads as a calm prompt to review rather than a list of accusations. Border and
+  heading use the AAA --danger red to match the per-row warnings and the form
+  field errors elsewhere.
+*/
+.hub-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  background: #fcebed;
+  border-radius: 8px;
+}
+
+/*
+  The block is hidden until a confirm with unresolved conflicts. The explicit
+  [hidden] rule is needed because the display:flex above would otherwise win over
+  the browser's default [hidden] { display: none }.
+*/
+.hub-error[hidden] {
+  display: none;
+}
+
+.hub-error svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
+.hub-error strong {
+  display: block;
+  font-weight: 800;
+  color: var(--danger);
+}
+
+.hub-error p {
+  margin: 2px 0 0;
+  color: var(--text);
+}
+
+.hub-error:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/*
+  Save confirmation. A quiet green toast (point 6) that announces a save without
+  interrupting the flow — role="status" so screen readers hear it politely.
+*/
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  z-index: 60;
+  max-width: calc(100vw - 32px);
+  padding: 12px 18px;
+  border-radius: 8px;
+  background: var(--ok);
+  color: #ffffff;
+  font-size: 17px;
+  font-weight: 600;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  opacity: 0;
+  transform: translate(-50%, 16px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.toast.is-visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast {
+    transition: opacity 0.2s ease;
+    transform: translate(-50%, 0);
+  }
+}
+
+.hub-empty {
+  margin: 0;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-soft);
+  color: var(--muted);
+}
+
+.hub-add {
+  margin-top: 12px;
+}
+
+.hub-add-link {
+  font-size: 17px;
+}
+
+.person-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.icon-button.menu-toggle {
+  color: var(--muted);
+}
+
+.icon-button:hover {
+  color: var(--blue);
+  background: #eef4fb;
+}
+
+.icon-button:focus-visible {
+  outline: 0;
+  color: var(--blue);
+  box-shadow: 0 0 0 3px var(--blue);
+}
+
+.row-menu {
+  position: relative;
+}
+
+.row-menu-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 5;
+  display: none;
+  min-width: 150px;
+  padding: 6px;
+  background: #fff;
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(11, 12, 12, 0.16);
+}
+
+.row-menu.is-open .row-menu-popover {
+  display: block;
+}
+
+.menu-item {
+  display: block;
+  width: 100%;
+  min-height: auto;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  box-shadow: none;
+  color: var(--text);
+  font-size: 17px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: #f2f4f5;
+}
+
+.menu-item.danger {
+  color: var(--danger);
 }
 
 .error {
@@ -691,15 +968,6 @@ textarea.input-error {
 
   .button-bar {
     align-items: flex-end;
-  }
-
-  .review-row,
-  .hub-row {
-    grid-template-columns: 1fr;
-  }
-
-  .row-actions {
-    justify-items: start;
   }
 }
 
