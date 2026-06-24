@@ -12,15 +12,23 @@ const PROBAND_BIRTH_YEAR = "1983";
 
 const BREAST_CANCER = "Breast cancer";
 
+// Placeholder list — the real product carries many more types. Only breast and
+// ovarian drive the calc for now; the rest are collected, not gated. A skipped
+// type is allowed and maps to "Unknown cancer" on the clinician referral, so
+// there is deliberately no "Other"/"Not sure" entry here (leave blank instead).
 const cancerTypes = [
   "Breast cancer",
   "Ovarian cancer",
   "Bowel cancer",
+  "Womb cancer",
   "Prostate cancer",
   "Pancreatic cancer",
   "Lung cancer",
-  "Other cancer",
-  "Not sure"
+  "Stomach cancer",
+  "Kidney cancer",
+  "Bladder cancer",
+  "Melanoma",
+  "Oesophageal cancer"
 ];
 
 const fixedDefs = [
@@ -468,7 +476,7 @@ function renderParentsReview(fromHub = false) {
     <h1>Review parents and grandparents</h1>
     <p class="lead">Check these details before you continue.</p>
     <div class="hub-people">${rows}</div>
-    ${buttonBar("", "continueAfterParents()", "", fromHub ? "Return to family history review" : "Continue")}
+    ${buttonBar("", "continueAfterParents()", "", "Continue")}
   `, "review-card");
 }
 
@@ -548,14 +556,17 @@ function renderCount(groupKey) {
   const selected = group.selectedCount;
 
   const moreMode = selected === "more";
-  const moreValue = group.count && group.count > 5 ? group.count : 6;
+  // "More" is just a switch to the numeric stepper; it carries no value floor of
+  // its own. Start at the committed count if there is one, otherwise 6 (the first
+  // number past the presets). The stepper can then go anywhere from 1 to 20.
+  const moreValue = group.count || 6;
 
   const control = moreMode
     ? `
     <div class="stepper-row" role="group" aria-label="${escapeAttr(def.countTitle)}">
       <button type="button" class="stepper-button" onclick="stepCount('${groupKey}', -1)" aria-label="Fewer">&minus;</button>
       <label class="sr-only" for="${groupKey}MoreCount">How many</label>
-      <input class="stepper-input" id="${groupKey}MoreCount" type="number" min="6" max="20" inputmode="numeric" value="${moreValue}">
+      <input class="stepper-input" id="${groupKey}MoreCount" type="number" min="1" max="20" inputmode="numeric" value="${moreValue}">
       <button type="button" class="stepper-button" onclick="stepCount('${groupKey}', 1)" aria-label="More">+</button>
     </div>`
     : `
@@ -581,7 +592,7 @@ function selectCount(groupKey, count) {
 
 function stepCount(groupKey, delta) {
   const input = document.getElementById(`${groupKey}MoreCount`);
-  input.value = String(Math.max(6, Math.min(20, Number(input.value || 6) + delta)));
+  input.value = String(Math.max(1, Math.min(20, Number(input.value || 6) + delta)));
 }
 
 function startRepeatGroup(groupKey) {
@@ -738,7 +749,7 @@ function renderRepeatReview(groupKey, fromHub = false) {
     <p class="lead">${group.items.length ? `You added ${group.items.length} ${group.items.length === 1 ? def.singular : def.title}. Check these details before you continue.` : `You said you do not have any ${def.title}.`}</p>
     ${rows}
     ${hubAddLink(`addRepeatPerson('${groupKey}')`, def.addLabel)}
-    ${buttonBar("", `continueAfterRepeatReview('${groupKey}')`, "", fromHub ? "Return to family history review" : "Continue")}
+    ${buttonBar("", `continueAfterRepeatReview('${groupKey}')`, "", "Continue")}
   `, "review-card");
 }
 
@@ -839,7 +850,7 @@ function renderOtherReview(fromHub = false) {
     <p class="lead">Add any other blood relatives who have been diagnosed with cancer. Add one relative at a time.</p>
     ${rows}
     ${hubAddLink("renderOtherTypeSelect()", "Add relative with cancer")}
-    ${buttonBar("", "continueAfterOtherReview()", "", fromHub ? "Return to family history review" : "Continue")}
+    ${buttonBar("", "continueAfterOtherReview()", "", "Continue")}
   `, "review-card");
 }
 
@@ -861,8 +872,18 @@ function renderOtherTypeSelect() {
       </div>
       <div id="otherTypeError" class="error">Choose a relationship type.</div>
     </fieldset>
-    ${buttonBar(state.other.items.length ? "Back to review" : "Back", "continueFromOtherType()", state.other.items.length ? "renderOtherReview()" : "renderOtherGate()")}
+    ${buttonBar(state.other.items.length ? "Back to review" : "Back", "continueFromOtherType()", "backFromOtherType()")}
   `);
+}
+
+// Back from the relationship-type picker. The hub path takes precedence: an add
+// launched from the final hub returns there, never into the section review
+// (which is unreachable from the hub). Otherwise fall back to the linear
+// destination — the review if relatives exist, else the section gate.
+function backFromOtherType() {
+  if (backToHubFromEdit()) return;
+  if (state.other.items.length) renderOtherReview();
+  else renderOtherGate();
 }
 
 function availableOtherTypes() {
@@ -1243,7 +1264,7 @@ function cancerBlockHtml(person) {
   if (person.cancer === "Yes" || person.diagnoses.length) {
     const units = person.diagnoses.length
       ? person.diagnoses.map(diagnosisLabelHtml)
-      : ["Cancer"];
+      : ["Unknown cancer"];
     return `<ul class="row-cancer">${units.map(unit => `<li>${unit}</li>`).join("")}</ul>`;
   }
   if (person.cancer === "Not sure") {
@@ -1253,11 +1274,12 @@ function cancerBlockHtml(person) {
 }
 
 // One diagnosis as "Type (age)", with a muted "(?)" placeholder when the age
-// was left out. An unknown type falls back to the generic word "Cancer" but
-// stays in the loud diagnosis tier — it is still a confirmed cancer. Bilateral
-// breast cancer is two separate primaries, so both ages are shown: "(45 and 52)".
+// was left out. A skipped type falls back to "Unknown cancer" (matching the
+// clinician referral form) but stays in the loud diagnosis tier — it is still a
+// confirmed cancer. Bilateral breast cancer is two separate primaries, so both
+// ages are shown: "(45 and 52)".
 function diagnosisLabelHtml(item) {
-  const type = escapeHtml(item.type || "Cancer");
+  const type = escapeHtml(item.type || "Unknown cancer");
   if (item.type === BREAST_CANCER && item.laterality === "Both breasts") {
     return `${type} (${ageOrPlaceholder(item.age)} and ${ageOrPlaceholder(item.age2)})`;
   }
@@ -1377,15 +1399,15 @@ function removeOtherFromHub(index) {
   removeOtherPerson(index);
 }
 
+// Only reachable for an unanswered section ("Answer this section" on the hub),
+// so it always lands on the gate; answering it returns to the hub. There is no
+// section-review screen reachable from the hub — edits happen in place per row.
 function openGroupFromHub(groupKey) {
-  const group = state.groups[groupKey];
-  if (!group.has) renderGate(groupKey, true);
-  else renderRepeatReview(groupKey, true);
+  renderGate(groupKey, true);
 }
 
 function openOtherFromHub() {
-  if (!state.other.has) renderOtherGate(true);
-  else renderOtherReview(true);
+  renderOtherGate(true);
 }
 
 function personFields(prefix, person, opts) {
@@ -1507,7 +1529,12 @@ function diagnosisEditor(prefix, diagnoses) {
     <div class="field">
       <label><strong>${heading}</strong></label>
       <div id="${prefix}DiagnosisRows">
-        ${rows.map((diagnosis, index) => diagnosisRow(prefix, diagnosis, index)).join("")}
+        ${rows.map((diagnosis, index) => {
+          // A cancer type can be chosen once per person, so hide the types
+          // already picked in the other rows (the row keeps its own value).
+          const taken = rows.filter((_, i) => i !== index).map(d => d.type).filter(Boolean);
+          return diagnosisRow(prefix, diagnosis, index, taken);
+        }).join("")}
       </div>
       <button class="link-button primary-link" onclick="addDiagnosisRow('${prefix}')">+ Add another cancer diagnosis</button>
     </div>
@@ -1519,7 +1546,22 @@ function diagnosisEditor(prefix, diagnoses) {
 // the same removal placement; breast cancer alone grows a laterality question in
 // its body. The body re-renders on type / laterality change so the right age
 // field(s) appear without rebuilding the whole row.
-function diagnosisRow(prefix, diagnosis = {}, index = 0) {
+// The cancer-type <option> set for one row. Types already chosen in other rows
+// are dropped so each type can be picked once per person; the row's own current
+// value is always kept so it still renders selected. The blank placeholder (a
+// skipped type → "Unknown cancer") is always available and never deduped.
+function diagnosisTypeOptions(selected, takenTypes = []) {
+  const taken = new Set(takenTypes);
+  return `
+    <option value="">Select a cancer type</option>
+    ${cancerTypes
+      .filter(type => type === selected || !taken.has(type))
+      .map(type => `<option value="${escapeAttr(type)}" ${selected === type ? "selected" : ""}>${escapeHtml(type)}</option>`)
+      .join("")}
+  `;
+}
+
+function diagnosisRow(prefix, diagnosis = {}, index = 0, takenTypes = []) {
   return `
     <div class="diagnosis-group" data-diagnosis-row data-prefix="${escapeAttr(prefix)}" data-index="${index}">
       <div class="diagnosis-type-row">
@@ -1527,8 +1569,7 @@ function diagnosisRow(prefix, diagnosis = {}, index = 0) {
           <label for="${prefix}CancerType${index}" class="label">Cancer type</label>
           ${errorSlot(`${prefix}CancerType${index}Error`)}
           <select id="${prefix}CancerType${index}" data-diagnosis-type onchange="onDiagnosisTypeChange(this)">
-            <option value="">Select a cancer type</option>
-            ${cancerTypes.map(type => `<option value="${escapeAttr(type)}" ${diagnosis.type === type ? "selected" : ""}>${escapeHtml(type)}</option>`).join("")}
+            ${diagnosisTypeOptions(diagnosis.type, takenTypes)}
           </select>
         </div>
         <button class="icon-button remove-diagnosis" type="button" aria-label="Remove this cancer" onclick="removeDiagnosisRow(this)">${ICON_TRASH}</button>
@@ -1611,10 +1652,24 @@ function addDiagnosisRow(prefix) {
   // for the life of the screen. Use max(existing index) + 1 rather than the row
   // count: removing a middle row leaves a gap, and a count-based index would
   // reuse a number still in play and collide ids (e.g. two "probandCancerType2").
-  const indices = Array.from(root.querySelectorAll("[data-diagnosis-row]"))
-    .map(row => Number(row.dataset.index) || 0);
+  const rows = Array.from(root.querySelectorAll("[data-diagnosis-row]"));
+  const indices = rows.map(row => Number(row.dataset.index) || 0);
   const index = indices.length ? Math.max(...indices) + 1 : 0;
-  root.insertAdjacentHTML("beforeend", diagnosisRow(prefix, {}, index));
+  // The new (empty) row can't offer types already chosen in the existing rows.
+  const taken = rows.map(row => row.querySelector("[data-diagnosis-type]").value).filter(Boolean);
+  root.insertAdjacentHTML("beforeend", diagnosisRow(prefix, {}, index, taken));
+}
+
+// Rebuild every row's type dropdown so each picked type is hidden from the other
+// rows. Called after any change that frees up or claims a type (pick, add,
+// remove). Each select keeps its own value selected.
+function refreshDiagnosisTypeOptions(root) {
+  if (!root) return;
+  const selects = Array.from(root.querySelectorAll("[data-diagnosis-type]"));
+  selects.forEach(select => {
+    const taken = selects.filter(other => other !== select).map(other => other.value).filter(Boolean);
+    select.innerHTML = diagnosisTypeOptions(select.value, taken);
+  });
 }
 
 // The trash control removes its row, except when it is the only diagnosis left —
@@ -1626,9 +1681,11 @@ function removeDiagnosisRow(button) {
     const select = row.querySelector("[data-diagnosis-type]");
     if (select) select.value = "";
     rerenderDiagnosisBody(row, {});
+    refreshDiagnosisTypeOptions(root);
     return;
   }
   row.remove();
+  refreshDiagnosisTypeOptions(root);
 }
 
 // Re-render just the body of a row (laterality + age fields) for a diagnosis.
@@ -1647,6 +1704,8 @@ function onDiagnosisTypeChange(select) {
     age: current.age,
     age2: current.age2
   });
+  // This row's pick changes what the other rows may offer.
+  refreshDiagnosisTypeOptions(row.closest("[id$='DiagnosisRows']"));
 }
 
 function onLateralityChange(input) {
@@ -1799,10 +1858,9 @@ function ageConflictRowMessage(person) {
   // you and your siblings). Prefer the edge that involves you, so the clearer
   // first-person wording wins over the generic rule.
   const edge = edges.find(e => e.parent.recordId === "proband" || e.child.recordId === "proband") || edges[0];
-  if (edge.child.recordId === "proband") return "A parent should be older than you.";
-  if (edge.parent.recordId === "proband") return "A child should be younger than you.";
-  if (edge.parent.typeKey === "greatGrandparent") return "A great-grandparent should be older than their child.";
-  return "A parent should be older than their child.";
+  if (edge.child.recordId === "proband") return "Check the birth years — a parent should be much older than you.";
+  if (edge.parent.recordId === "proband") return "Check the birth years — a child should be much younger than you.";
+  return "Check the birth years — a parent should be much older than their child.";
 }
 
 /*
@@ -2072,36 +2130,33 @@ function validatePersonForm(prefix, opts = {}) {
   return applyErrors(errors);
 }
 
+// Diagnoses are collected, not gated: a skipped cancer type is allowed (it maps
+// to "Unknown cancer" downstream) and a person with cancer can proceed with no
+// details at all. So this only flags genuinely invalid data — an out-of-range
+// age, or a bilateral breast pair where the second diagnosis predates the first.
 function validateDiagnoses(prefix) {
   const errors = [];
   const root = document.getElementById(`${prefix}DiagnosisRows`);
   if (!root) return errors;
   const rows = Array.from(root.querySelectorAll("[data-diagnosis-row]"));
-  let anyType = false;
-  let anyAge = false;
   rows.forEach(row => {
-    const typeEl = row.querySelector("[data-diagnosis-type]");
     const ageEl = row.querySelector("[data-diagnosis-age]");
     const age2El = row.querySelector("[data-diagnosis-age2]");
-    const type = typeEl.value.trim();
     const age = ageEl ? ageEl.value.trim() : "";
     const age2 = age2El ? age2El.value.trim() : "";
-    if (type) anyType = true;
-    if (age || age2) anyAge = true;
-    if ((age || age2) && !type) {
-      errors.push([`${typeEl.id}Error`, "Add the cancer type for this age."]);
-    }
     if (ageEl && age && !validDiagnosisAge(age)) {
       errors.push([`${ageEl.id}Error`, "Enter an age from 0 to 125."]);
     }
     if (age2El && age2 && !validDiagnosisAge(age2)) {
       errors.push([`${age2El.id}Error`, "Enter an age from 0 to 125."]);
     }
+    // Bilateral breast: the second diagnosis can't predate the first (equal is
+    // fine — both found at once). A blank second age is allowed; only check when
+    // both are present and valid, so this never collides with the range error.
+    if (age2El && validDiagnosisAge(age) && validDiagnosisAge(age2) && Number(age) > Number(age2)) {
+      errors.push([`${age2El.id}Error`, "Age at second diagnosis can't be younger than the first."]);
+    }
   });
-  if (!anyType && !anyAge && rows[0]) {
-    const firstType = rows[0].querySelector("[data-diagnosis-type]");
-    if (firstType) errors.push([`${firstType.id}Error`, "Add at least one cancer type."]);
-  }
   return errors;
 }
 
@@ -2536,6 +2591,7 @@ window.continueFromOtherGate = continueFromOtherGate;
 window.renderOtherReview = renderOtherReview;
 window.renderOtherTypeSelect = renderOtherTypeSelect;
 window.continueFromOtherType = continueFromOtherType;
+window.backFromOtherType = backFromOtherType;
 window.renderOtherForm = renderOtherForm;
 window.backFromOtherForm = backFromOtherForm;
 window.expandAnchorLabels = expandAnchorLabels;

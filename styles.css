@@ -962,12 +962,33 @@ textarea.input-error {
     box-shadow: none;
   }
 
+  /* Stack horizontal radio sets vertically — one full-width option per line is
+     easier to tap and avoids ragged wraps (e.g. "Alive / Died" + "Not sure"). */
   .radio-row {
-    gap: 16px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
   }
 
+  /* Stack the action bar: primary button full-width on top, secondary (Back)
+     centred below it. column-reverse flips the DOM order (Back is first in the
+     markup) so the primary leads. This avoids cramped, multi-line labels sitting
+     side by side on narrow screens. */
   .button-bar {
-    align-items: flex-end;
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .button-bar .button {
+    width: 100%;
+  }
+
+  .button-bar .link-button {
+    min-height: 48px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
 }
 
