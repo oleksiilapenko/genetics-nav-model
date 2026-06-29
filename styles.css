@@ -651,6 +651,12 @@ input.stepper-input {
   color: var(--muted);
 }
 
+/* Secondary pathology detail on a diagnosis (e.g. "· triple negative"). Muted
+   so it reads as a qualifier of the cancer above it, not a second cancer. */
+.row-cancer-note {
+  color: var(--muted);
+}
+
 /*
   Inline age-conflict warning on a relative's row. The triangle icon plus error
   red mark it as the one thing worth stopping for, while the wording states the

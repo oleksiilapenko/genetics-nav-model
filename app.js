@@ -1277,13 +1277,19 @@ function cancerBlockHtml(person) {
 // was left out. A skipped type falls back to "Unknown cancer" (matching the
 // clinician referral form) but stays in the loud diagnosis tier — it is still a
 // confirmed cancer. Bilateral breast cancer is two separate primaries, so both
-// ages are shown: "(45 and 52)".
+// ages are shown: "(45 and 52)". A triple-negative breast cancer adds a muted
+// "· triple negative" note — only when answered "Yes", since it is the one
+// triple-negative state that changes the risk calc and referral; "No"/"Not sure"
+// stay silent to keep the summary scannable.
 function diagnosisLabelHtml(item) {
   const type = escapeHtml(item.type || "Unknown cancer");
+  const note = item.type === BREAST_CANCER && item.tripleNegative === "Yes"
+    ? ` <span class="row-cancer-note">· triple negative</span>`
+    : "";
   if (item.type === BREAST_CANCER && item.laterality === "Both breasts") {
-    return `${type} (${ageOrPlaceholder(item.age)} and ${ageOrPlaceholder(item.age2)})`;
+    return `${type} (${ageOrPlaceholder(item.age)} and ${ageOrPlaceholder(item.age2)})${note}`;
   }
-  return `${type} (${ageOrPlaceholder(item.age)})`;
+  return `${type} (${ageOrPlaceholder(item.age)})${note}`;
 }
 
 function ageOrPlaceholder(age) {
@@ -1584,6 +1590,9 @@ function diagnosisRow(prefix, diagnosis = {}, index = 0, takenTypes = []) {
 // Everything below the cancer-type selector. Breast cancer asks which breast(s)
 // were affected: "Both breasts" means two separate primaries, each with its own
 // age (BR1, BR2); anything else is a single age. Other cancers keep one age.
+// Breast cancer also asks whether it was triple negative — this follows the
+// age(s), once which-breast is answered, so the easy factual questions come
+// first and the optional pathology question comes last.
 function diagnosisBody(prefix, diagnosis = {}, index = 0) {
   if (diagnosis.type === BREAST_CANCER) {
     const laterality = diagnosis.laterality || "";
@@ -1600,9 +1609,37 @@ function diagnosisBody(prefix, diagnosis = {}, index = 0) {
     } else if (laterality) {
       ages = ageField(prefix, index, diagnosis.age, "Age at diagnosis");
     }
-    return `${breastLateralityRow(prefix, index, laterality)}${ages}`;
+    const tripleNegative = laterality ? tripleNegativeRow(prefix, index, diagnosis.tripleNegative) : "";
+    return `${breastLateralityRow(prefix, index, laterality)}${ages}${tripleNegative}`;
   }
   return ageField(prefix, index, diagnosis.age, "Age at diagnosis");
+}
+
+// Triple negative is a tumour-pathology attribute of a breast cancer, not a
+// separate cancer type — it maps to the single CanRisk ER column per relative
+// (Yes -> ER=0, No -> ER=1, Not sure / unanswered -> ER=NA). One question per
+// person is correct: the one-type-once rule means a person has at most one
+// breast-cancer row, so this single flag covers a bilateral (BC1+BC2) case too.
+// It is optional and left unselected by default: an unanswered question and an
+// explicit "Not sure" both mean ER unknown downstream, so we never pre-tick an
+// answer the patient did not give.
+function tripleNegativeRow(prefix, index, current) {
+  const name = `${prefix}TripleNegative${index}`;
+  const options = ["Yes", "No", "Not sure"];
+  return `
+    <div class="diagnosis-field">
+      <label class="label">Was the breast cancer triple negative (TNBC)?</label>
+      <p class="hint">A type of breast cancer that doesn't respond to hormone treatments. Choose "Not sure" if you don't know.</p>
+      <div class="radio-stack">
+        ${options.map(option => `
+          <label class="radio-option">
+            <input type="radio" name="${name}" value="${escapeAttr(option)}" data-diagnosis-tnbc ${current === option ? "checked" : ""}>
+            <span class="radio-option-text"><span>${escapeHtml(option)}</span></span>
+          </label>
+        `).join("")}
+      </div>
+    </div>
+  `;
 }
 
 function breastLateralityRow(prefix, index, current) {
@@ -1702,7 +1739,8 @@ function onDiagnosisTypeChange(select) {
     type: select.value,
     laterality: select.value === BREAST_CANCER ? current.laterality : "",
     age: current.age,
-    age2: current.age2
+    age2: current.age2,
+    tripleNegative: select.value === BREAST_CANCER ? current.tripleNegative : ""
   });
   // This row's pick changes what the other rows may offer.
   refreshDiagnosisTypeOptions(row.closest("[id$='DiagnosisRows']"));
@@ -1721,11 +1759,13 @@ function readDiagnosisRowValues(row) {
   const latEl = row.querySelector("[data-diagnosis-laterality]:checked");
   const ageEl = row.querySelector("[data-diagnosis-age]");
   const age2El = row.querySelector("[data-diagnosis-age2]");
+  const tnbcEl = row.querySelector("[data-diagnosis-tnbc]:checked");
   return {
     type: typeEl ? typeEl.value : "",
     laterality: latEl ? latEl.value : "",
     age: ageEl ? ageEl.value.trim() : "",
-    age2: age2El ? age2El.value.trim() : ""
+    age2: age2El ? age2El.value.trim() : "",
+    tripleNegative: tnbcEl ? tnbcEl.value : ""
   };
 }
 
@@ -1742,6 +1782,7 @@ function readDiagnoses(prefix) {
     if (values.type === BREAST_CANCER) {
       diagnosis.laterality = values.laterality;
       if (values.laterality === "Both breasts") diagnosis.age2 = values.age2;
+      if (values.tripleNegative) diagnosis.tripleNegative = values.tripleNegative;
     }
     return diagnosis;
   }).filter(item => item.type || item.age || item.age2);
