@@ -795,7 +795,7 @@ function renderOtherGate(fromHub = false) {
   setScreen(`
     <h1>Do you know of any other blood relatives who have had cancer?</h1>
     <div class="lead muted">
-      <p>This may include:</p>
+      <p>Add more distant relatives who have had cancer, such as:</p>
       <ul>
         <li>grandchildren or great-grandchildren</li>
         <li>first cousins</li>
@@ -804,7 +804,7 @@ function renderOtherGate(fromHub = false) {
         <li>great-nieces or great-nephews</li>
         <li>great-grandparents</li>
       </ul>
-      <p>You do not need to add everyone in your family – only relatives who have been diagnosed with cancer.</p>
+      <p>Sometimes you'll add a healthy relative too, to link someone with cancer to the rest of your family. We'll guide you through it.</p>
     </div>
     <fieldset>
       <legend class="sr-only">Choose one option</legend>
@@ -846,10 +846,10 @@ function renderOtherReview(fromHub = false) {
     : `<div class="empty-state">No relatives added yet.</div>`;
 
   setScreen(`
-    <h1>Other blood relatives with cancer</h1>
-    <p class="lead">Add any other blood relatives who have been diagnosed with cancer. Add one relative at a time.</p>
+    <h1>Other blood relatives</h1>
+    <p class="lead">Add more distant relatives who have had cancer, plus any healthy relatives that link them to your family. Add one at a time.</p>
     ${rows}
-    ${hubAddLink("renderOtherTypeSelect()", "Add relative with cancer")}
+    ${hubAddLink("renderOtherTypeSelect()", "Add a relative")}
     ${buttonBar("", "continueAfterOtherReview()", "", "Continue")}
   `, "review-card");
 }
@@ -858,8 +858,8 @@ function renderOtherTypeSelect() {
   const available = availableOtherTypes();
   setScreen(`
     <h1>Which relative would you like to add?</h1>
-    <p class="lead muted">Only add relatives who have been diagnosed with cancer.</p>
-    <p class="muted">Add one relative at a time. You can add another relative afterwards.</p>
+    <p class="lead muted">Add relatives who have had cancer. You can also add a healthy relative to link someone with cancer to your family.</p>
+    <p class="muted">Add the oldest relatives first, so each new person can be linked to someone already in your list. For example, add a parent before their child. Add one at a time.</p>
     <fieldset>
       <legend class="sr-only">Relationship type</legend>
       <div class="radio-stack">
@@ -886,8 +886,12 @@ function backFromOtherType() {
   else renderOtherGate();
 }
 
+// Every relationship type is always offered. Linking to a parent is now optional
+// (see saveOtherPerson), so a relative can be added before the connecting relative
+// exists — e.g. a great-grandchild before their grandchild. The hub flags any
+// still-unlinked relative for recovery (see orphanRelatives).
 function availableOtherTypes() {
-  return otherTypeDefs.filter(type => type.anchors().length > 0);
+  return otherTypeDefs;
 }
 
 function continueFromOtherType() {
@@ -908,8 +912,7 @@ function blankOtherPerson(typeKey) {
     recordId: `${typeKey}-${count}`,
     pedigreeId: `${type.prefix}${count}`,
     relationship: type.label,
-    typeKey,
-    cancer: "Yes"
+    typeKey
   });
 }
 
@@ -935,9 +938,10 @@ function renderOtherForm(person) {
     </div>
     <div class="field">
       <label for="otherAnchor">${escapeHtml(type.anchorQuestion)}</label>
+      <p class="hint">Not added the connecting relative yet? Leave this blank — we'll remind you to link them before you finish.</p>
       ${errorSlot("otherAnchorError")}
       <select id="otherAnchor" onfocus="expandAnchorLabels(this)" onmousedown="expandAnchorLabels(this)" onchange="collapseAnchorLabel(this)" onblur="collapseAnchorLabel(this)">
-        <option value="" ${person.anchorId ? "" : "selected"} disabled>${escapeHtml(type.anchorPlaceholder || "Select a person")}</option>
+        <option value="" ${person.anchorId ? "" : "selected"}>${escapeHtml(type.anchorPlaceholder || "Select a person")}</option>
         ${anchors.map(anchor => {
           const selected = person.anchorId === anchor.recordId;
           const text = selected ? anchorLabelShort(anchor) : anchorLabelFull(anchor);
@@ -948,29 +952,37 @@ function renderOtherForm(person) {
     ${sexField("other", person.sex)}
     ${yearField("otherBirthYear", person.birthYear)}
     ${livingField("other", person.living, person.yearOfDeath)}
-    <hr class="divider">
-    <p class="muted">We'll ask a few more questions about their cancer.</p>
-    ${diagnosisEditor("other", person.diagnoses)}
-    <div class="field">
-      <label for="otherTreatedWhere"><strong>Where they were treated</strong></label>
-      <p class="hint">Add anything you remember — a hospital name, clinic, town, city, or county. Leave blank if you're not sure.</p>
-      <textarea id="otherTreatedWhere">${escapeHtml(person.treatedWhere)}</textarea>
-    </div>
-    <div class="field">
-      <label for="otherNotes" class="muted">Add anything else you know, such as treatment, stage, genetic testing, or other family history.</label>
-      <textarea id="otherNotes">${escapeHtml(person.notes)}</textarea>
+    <fieldset>
+      <legend><strong>Has this person ever been diagnosed with cancer?</strong></legend>
+      ${errorSlot("otherCancerError")}
+      ${radioRow("otherCancer", ["Yes", "No", "Not sure"], person.cancer, "toggleCancerPanel('otherCancerPanel', 'otherCancer')")}
+    </fieldset>
+    <div id="otherCancerPanel" class="cancer-panel ${person.cancer === "Yes" ? "is-open" : ""}">
+      <hr class="divider">
+      <p class="muted">We'll ask a few more questions about their cancer.</p>
+      ${diagnosisEditor("other", person.diagnoses)}
+      <div class="field">
+        <label for="otherTreatedWhere"><strong>Where they were treated</strong></label>
+        <p class="hint">Add anything you remember — a hospital name, clinic, town, city, or county. Leave blank if you're not sure.</p>
+        <textarea id="otherTreatedWhere">${escapeHtml(person.treatedWhere)}</textarea>
+      </div>
+      <div class="field">
+        <label for="otherNotes" class="muted">Add anything else you know, such as treatment, stage, genetic testing, or other family history.</label>
+        <textarea id="otherNotes">${escapeHtml(person.notes)}</textarea>
+      </div>
     </div>
     ${buttonBar(editing || runtime.editToHub ? "Back to review" : "Back", "saveOtherPerson()", "backFromOtherForm()", editing ? "Save changes" : "Add and continue")}
   `);
 }
 
 function saveOtherPerson() {
-  if (!validatePersonForm("other", { showSex: true, showSiblingShare: false, hasCancerRadio: false, requireAnchor: true })) return;
+  if (!validatePersonForm("other", { showSex: true, showSiblingShare: false, hasCancerRadio: true, requireAnchor: false })) return;
   const type = otherTypeDefs.find(item => item.key === runtime.otherTypeKey);
   const isAdding = runtime.otherEditingIndex === null;
   const existing = isAdding
     ? blankOtherPerson(runtime.otherTypeKey)
     : state.other.items[runtime.otherEditingIndex];
+  const cancer = getRadio("otherCancer");
   const person = {
     ...existing,
     relationship: type.label,
@@ -980,8 +992,8 @@ function saveOtherPerson() {
     birthYear: value("otherBirthYear"),
     living: getRadio("otherLiving"),
     yearOfDeath: getRadio("otherLiving") === "Died" ? value("otherDeathYear") : "",
-    cancer: "Yes",
-    diagnoses: readDiagnoses("other"),
+    cancer,
+    diagnoses: cancer === "Yes" ? readDiagnoses("other") : [],
     treatedWhere: value("otherTreatedWhere"),
     notes: value("otherNotes")
   };
@@ -1043,6 +1055,10 @@ function continueAfterOtherReview() {
 
 function assignOtherParentLinks(person) {
   const anchor = findPersonByRecordId(person.anchorId);
+  // Reset first so clearing the anchor on an edit drops the old link and leaves
+  // the relative unlinked (an orphan the hub will flag), rather than keeping a
+  // stale parentIds carried over by the spread in saveOtherPerson.
+  person.parentIds = {};
   if (!anchor) return;
   if (person.typeKey === "grandchild" || person.typeKey === "greatGrandchild" || person.typeKey === "nieceNephew" || person.typeKey === "grandNieceNephew" || person.typeKey === "firstCousin") {
     person.parentIds = { knownParent: anchor.pedigreeId, otherParent: `U-${person.pedigreeId}` };
@@ -1088,21 +1104,15 @@ function renderFinalHub() {
     hubOtherSection()
   ].join("");
 
-  // Each conflicted relative carries an inline warning on its own row (see
-  // hubPersonRow). On confirm, submitFinalHub() also raises a single global error
-  // (hidden until then) that points back to those highlighted rows without naming
-  // anyone — a calm prompt to review rather than the heavier per-relative banner,
-  // which is backlogged.
+  // Each flagged relative carries an inline warning on its own row (see
+  // hubPersonRow): an age conflict, or a relative not yet linked to the family.
+  // On confirm, submitFinalHub() fills and reveals this single global error
+  // (hidden until then), which points back to the highlighted rows without naming
+  // anyone — a calm prompt to review rather than a heavier per-relative banner.
   setScreen(`
     <h1>Review your family history</h1>
     <p class="lead muted">Check everyone's details below. You can change or remove any relative.</p>
-    <div class="hub-error" id="hub-error" role="alert" tabindex="-1" hidden>
-      ${ICON_WARNING}
-      <div>
-        <strong>Some birth years need another look</strong>
-        <p>Please review the highlighted relatives, then confirm again.</p>
-      </div>
-    </div>
+    <div class="hub-error" id="hub-error" role="alert" tabindex="-1" hidden></div>
     <div class="hub-review">${sections}</div>
     <div class="button-bar single-action">
       <button class="button" onclick="submitFinalHub()">Confirm and continue</button>
@@ -1111,16 +1121,19 @@ function renderFinalHub() {
 }
 
 /*
-  Confirm gate. If any relative's birth years still conflict, reveal the global
-  error and move focus to it (role="alert" also announces it) instead of
-  submitting — the user fixes the highlighted rows and confirms again. With no
-  conflicts left, the flow proceeds (here, the prototype's end-of-flow alert).
+  Confirm gate. If any relative still has a problem — a birth-year conflict, or a
+  relative not yet linked to the family — fill and reveal the global error and
+  move focus to it (role="alert" also announces it) instead of submitting. The
+  user fixes the highlighted rows and confirms again. With nothing left to fix,
+  the flow proceeds (here, the prototype's end-of-flow alert).
 */
 function submitFinalHub() {
-  const hasConflicts = ageConflictEdges().length > 0;
+  const conflicts = ageConflictEdges().length > 0;
+  const orphans = orphanRelatives().length;
   const error = document.getElementById("hub-error");
-  if (hasConflicts) {
+  if (conflicts || orphans) {
     if (error) {
+      error.innerHTML = hubErrorBody(orphans, conflicts);
       error.hidden = false;
       error.focus();
     }
@@ -1128,6 +1141,38 @@ function submitFinalHub() {
   }
   if (error) error.hidden = true;
   alert("That is the end of the prototype. In the real service, this would submit your answers.");
+}
+
+/*
+  Body for the global hub error, built from whatever is currently wrong. Unlinked
+  relatives lead (they block a valid pedigree outright); a birth-year conflict is
+  the softer "please double-check". The recovery route is spelt out: add the
+  connecting relative, then edit the highlighted one to link it.
+*/
+function hubErrorBody(orphanCount, hasConflicts) {
+  const messages = [];
+  if (orphanCount) {
+    messages.push(orphanCount === 1
+      ? "One relative isn't linked to your family yet. Add the connecting relative, then edit the highlighted one to link it."
+      : `${orphanCount} relatives aren't linked to your family yet. Add the connecting relatives, then edit the highlighted ones to link them.`);
+  }
+  if (hasConflicts) {
+    messages.push("Some birth years need another look. Please check the highlighted relatives.");
+  }
+  return `${ICON_WARNING}<div><strong>Some details need another look</strong>${messages.map(text => `<p>${escapeHtml(text)}</p>`).join("")}</div>`;
+}
+
+// A relative added without a usable link to the rest of the family: no anchor
+// chosen, or an anchor that no longer resolves (e.g. the connecting relative was
+// later removed). These can't be placed on the pedigree, so the hub flags them
+// for recovery. Only "other blood relatives" can be orphaned — they're the only
+// records with an optional anchor (typeKey is set on them alone).
+function isOrphanRelative(person) {
+  return Boolean(person.typeKey) && !findPersonByRecordId(person.anchorId);
+}
+
+function orphanRelatives() {
+  return state.other.items.filter(isOrphanRelative);
 }
 
 // Brief success confirmation, lives on <body> so it survives the #app re-render
@@ -1192,15 +1237,15 @@ function hubOtherSection() {
   if (!state.other.has) {
     body = hubEmptyBody("Not answered yet", "openOtherFromHub()", "Answer this section");
   } else if (state.other.has === "No" || !state.other.items.length) {
-    body = hubEmptyBody("None added.", "addOtherFromHub()", "Add a relative with cancer");
+    body = hubEmptyBody("None added.", "addOtherFromHub()", "Add a relative");
   } else {
     const rows = state.other.items.map((person, index) => hubPersonRow(person, {
       edit: `editOtherFromHub(${index})`,
       remove: `removeOtherFromHub(${index})`
     })).join("");
-    body = `<div class="hub-people">${rows}</div>${hubAddLink("addOtherFromHub()", "Add another relative with cancer")}`;
+    body = `<div class="hub-people">${rows}</div>${hubAddLink("addOtherFromHub()", "Add another relative")}`;
   }
-  return hubSection("Other blood relatives with cancer", body);
+  return hubSection("Other blood relatives", body);
 }
 
 function hubEmptyBody(text, action, actionLabel) {
@@ -1237,6 +1282,7 @@ function hubPersonRow(person, opts) {
   const meta = metaBits.join(" · ");
   const cancer = cancerBlockHtml(person);
   const warning = ageConflictRowMessage(person);
+  const orphan = isOrphanRelative(person);
   const rowId = person.recordId ? ` id="row-${escapeAttr(person.recordId)}"` : "";
   return `
     <article class="person-row"${rowId}>
@@ -1244,6 +1290,7 @@ function hubPersonRow(person, opts) {
         <div class="row-title">${titleHtml}</div>
         ${meta ? `<div class="row-meta">${escapeHtml(meta)}</div>` : ""}
         ${cancer}
+        ${orphan ? `<p class="row-warning">${ICON_WARNING}<span>Not linked to your family yet. Edit to link this relative.</span></p>` : ""}
         ${warning ? `<p class="row-warning">${ICON_WARNING}<span>${escapeHtml(warning)}</span></p>` : ""}
       </div>
       <div class="person-actions">
@@ -2453,9 +2500,6 @@ function fillPersonScreen(prefix, opts) {
     checkRadioIfNone(`${prefix}Cancer`, "No");
     toggleCancerPanel(`${prefix}CancerPanel`, `${prefix}Cancer`);
     if (getRadio(`${prefix}Cancer`) === "Yes") fillDiagnosisRows(prefix);
-  } else {
-    // "Other blood relatives" form has no cancer question — they always have cancer.
-    fillDiagnosisRows(prefix);
   }
 }
 
@@ -2463,7 +2507,7 @@ function fillCurrentScreen() {
   if (document.querySelector('input[name="probandCancer"]')) {
     fillPersonScreen("proband", { showSex: false, hasCancerRadio: true, sexForName: "" });
   } else if (document.getElementById("otherName")) {
-    fillPersonScreen("other", { showSex: true, hasCancerRadio: false, birthYear: currentOtherBirthYear() });
+    fillPersonScreen("other", { showSex: true, hasCancerRadio: true, birthYear: currentOtherBirthYear() });
   } else if (document.getElementById("repeatName")) {
     fillPersonScreen("repeat", {
       showSex: true,
